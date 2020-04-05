@@ -24,6 +24,8 @@ import io.netty.handler.ssl.SslContextBuilder
 import io.netty.handler.ssl.util.SelfSignedCertificate
 import io.netty.handler.stream.ChunkedWriteHandler
 
+const val WS_PATH = "/ws"
+
 fun main(args: Array<String>) {
     // TODO
     start(1, 8080)
@@ -53,6 +55,7 @@ fun start(realmCount: Int, port: Int) {
     )
 
     try {
+        println("Starting websocket application on port=$port and path=$WS_PATH")
         val channel = bootstrap.bind(port).channel()
         channel.closeFuture().sync()
     } catch (e: Exception) {
@@ -115,7 +118,7 @@ private fun chInit(
                         WebSocketServerProtocolConfig.newBuilder()
                             .allowExtensions(true)
                             .checkStartsWith(true)
-                            .websocketPath("/ws")
+                            .websocketPath(WS_PATH)
                             .build()
                     )
                 )
