@@ -8,10 +8,6 @@ sealed class UserCommand {
     abstract val channel: Channel
 }
 
-class ListRealmsCommand(
-    override val channel: Channel
-) : UserCommand()
-
 class JoinGameCommand(
     override val channel: Channel,
     val userName: String
