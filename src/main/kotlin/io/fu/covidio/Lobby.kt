@@ -28,25 +28,27 @@ class Lobby(
     }
 
     fun removeChannel(ch: Channel) {
-        val realmId = ch.realmId
-        if (realmId != null) {
-            realmsById[realmId]
-                ?.run { this.gameLoop.input.push(LeaveGameCommand(ch)) }
-                ?: println("Realm(id=$realmId) was not found")
-        } else {
-            println("Channel(id=${ch.id()}) is missing realmId")
+        withRealm(ch) {
+            it.gameLoop.input.push(LeaveGameCommand(ch))
         }
     }
 
     fun handleMessage(ch: Channel, ws: BinaryWebSocketFrame) {
+        withRealm(ch) {
+            val cmd = decoder.decode(ch, ws.content())
+            it.gameLoop.input.push(cmd)
+        }
+    }
+
+    private fun withRealm(ch: Channel, block: (Realm) -> Unit) {
         val realmId = ch.realmId
         if (realmId != null) {
-            realmsById[realmId]
-                ?.run {
-                    val cmd = decoder.decode(ch, ws.content())
-                    this.gameLoop.input.push(cmd)
-                }
+            val realm = realmsById[realmId]
+            realm
+                ?.run(block)
                 ?: println("Realm(id=$realmId) was not found")
+        } else {
+            println("Channel(id=${ch.id()} is missing realmId")
         }
     }
 
