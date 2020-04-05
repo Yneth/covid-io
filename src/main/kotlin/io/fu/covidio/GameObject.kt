@@ -32,6 +32,14 @@ class GameObject(
 ) {
     val components: List<Component> = createComponents(this)
     val rigidBody: Body = createRigidBody(this)
+
+    val isPlayer: Boolean by lazy {
+        components.any { it is PlayerComponent }
+    }
+
+    val isBullet: Boolean by lazy {
+        components.any { it is BulletComponent }
+    }
 }
 
 fun createPlayer(

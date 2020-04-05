@@ -6,20 +6,35 @@ import io.netty.channel.Channel
 import java.util.UUID
 import org.jbox2d.common.Vec2
 
+// input codes
+const val MOVE_CODE = 0
+const val SHOOT_CODE = 1
+const val JOIN_GAME_CODE = 100
+const val LEAVE_GAME_CODE = 101
+
+// output codes
+const val STATE_CODE = 0
+
+// output game obj type codes
+const val PLAYER_CODE = 0
+const val BULLET_CODE = 1
+const val UNKNOWN_CODE = -1
+
 class GameDecoder {
     fun decode(channel: Channel, byteBuf: ByteBuf): UserCommand {
-        val commandId = byteBuf.readByte().toInt()
-        return when (commandId) {
-            // TODO: normalize
-            0 -> MoveCommand(
+        // TODO: validation
+        // TODO: error handling
+        return when (byteBuf.readByte().toInt()) {
+            MOVE_CODE -> MoveCommand(
                 channel,
+                // TODO: normalize
                 Vec2(
                     byteBuf.readShort().toFloat(),
                     byteBuf.readShort().toFloat()
                 )
             )
-            1 -> ShootCommand(channel)
-            100 -> {
+            SHOOT_CODE -> ShootCommand(channel)
+            JOIN_GAME_CODE -> {
                 val userNameSize = byteBuf.readByte().toInt()
                 val userNameBytes = ByteArray(userNameSize)
                 byteBuf.readBytes(userNameBytes)
@@ -29,7 +44,7 @@ class GameDecoder {
                     userName = UUID.randomUUID().toString()
                 )
             }
-            101 -> LeaveGameCommand(channel)
+            LEAVE_GAME_CODE -> LeaveGameCommand(channel)
             else -> TODO()
         }
     }
@@ -38,12 +53,36 @@ class GameDecoder {
 class GameEncoder(
     private val allocator: ByteBufAllocator
 ) {
+    fun encode(frustum: List<GameObject>): ByteBuf {
+        return allocator.directBuffer().apply {
+            this.writeByte(STATE_CODE)
 
-    fun encode(gameObjects: List<GameObject>): ByteBuf {
-        return allocator.buffer(1024)
+            this.writeInt(frustum.size)
+
+            frustum.forEach {
+                writeType(it, this)
+                writePosition(it, this)
+            }
+        }
     }
 
-    fun encode(cmd: ListRealmsCommand): ByteBuf {
-        TODO("not implemented") // To change body of created functions use File | Settings | File Templates.
+    private fun writeType(go: GameObject, buf: ByteBuf) {
+        val type = when {
+            go.isPlayer -> PLAYER_CODE
+            go.isBullet -> BULLET_CODE
+            else -> UNKNOWN_CODE // ignore
+        }
+        buf.writeByte(type)
+    }
+
+    private fun writePosition(go: GameObject, buf: ByteBuf) {
+        // writing as short as we are never
+        // going to exceed its' value
+        buf.writeShort(float2int(go.position.x))
+        buf.writeShort(float2int(go.position.y))
+    }
+
+    private fun float2int(f: Float): Int {
+        return (f * 10).toInt()
     }
 }
