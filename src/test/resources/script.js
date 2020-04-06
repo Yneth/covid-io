@@ -8,10 +8,7 @@
     canvas = document.getElementById('canvas'),
     buffer = document.createElement('canvas');
 
-  let
-    users = [],
-    bullets = [],
-    walls = [];
+  let users = [], bullets = [];
 
   canvas.width = document.body.clientWidth;
   buffer.width = document.body.clientWidth;
@@ -23,8 +20,6 @@
     canvasHeight = canvas.height,
     cameraScale = Math.min(canvasWidth, canvasHeight),
     boundingRect = canvas.getBoundingClientRect();
-
-  const ctx = canvas.getContext('2d');
 
 
   canvas.addEventListener('click', function (event) {
@@ -42,57 +37,46 @@
     const userNumber = (Math.random() * 100) | 0;
     joinGame('Test' + userNumber);
   };
+
   socket.onmessage = function (e) {
-    var data = new Uint8Array(e.data);
-    if (data[0] !== 0) {
-      return;
-    }
-    users = [];
-    bullets = [];
-    walls = [];
-    var i = 3;
-    var playerCount = data[2];
-    while (playerCount-- > 0) {
-      var x = (data[i] << 8) | data[i + 1];
-      var y = (data[i + 2] << 8) | data[i + 3];
+    const
+      STATE_CODE = 0;
+    const
+      PLAYER_CODE = 0,
+      BULLET_CODE = 1;
 
-      var player = toViewport(x, y);
+    const data = new Uint8Array(e.data);
 
-      player.rotation = {};
-      player.rotation.x = data[i + 4];
-      player.rotation.y = data[i + 5];
-      if (player.rotation.x > 10) {
-        player.rotation.x = -(player.rotation.x & ~(1 << 5));
+    const messageCode = data[0];
+    switch (messageCode) {
+      case STATE_CODE: {
+        users = [];
+        bullets = [];
+
+        let i = 1;
+        let gameObjectCount =
+          (data[i++] << 24)
+          | (data[i++] << 16)
+          | (data[i++] << 8)
+          | (data[i++]);
+
+        while (gameObjectCount-- > 0) {
+          const gameObjectType = data[i++];
+          const
+            xPos = sh2int(data[i++], data[i++]),
+            yPos = sh2int(data[i++], data[i++]);
+          console.log(xPos, yPos);
+
+          const gameObject = toViewport(xPos, yPos);
+          if (gameObjectType === PLAYER_CODE) {
+            users.push(gameObject);
+          } else if (gameObjectType === BULLET_CODE) {
+            bullets.push(gameObject);
+          }
+        }
+        break;
       }
-      if (player.rotation.y > 10) {
-        player.rotation.y = -(player.rotation.y & ~(1 << 5));
-      }
-      player.rotation.x /= 10;
-      player.rotation.y /= 10;
-
-      users.push(player);
-      i += 6;
-    }
-    var bulletCount = sh2int(data[i], data[i + 1]);
-    i += 2;
-    while (bulletCount-- > 0) {
-      var x = sh2int(data[i], data[i + 1]);
-      var y = sh2int(data[i + 2], data[i + 3]);
-
-      bullets.push(toViewport(x, y));
-      i += 4;
-    }
-    for (; i < data.length - 7; i += 8) {
-      var x = sh2int(data[i], data[i + 1]);
-      var y = sh2int(data[i + 2], data[i + 3]);
-      var width = sh2int(data[i + 4], data[i + 5]);
-      var height = sh2int(data[i + 6], data[i + 7]);
-
-      var wall = toViewport(x, y);
-      var bounds = toViewport(width, height);
-      wall.width = bounds.x;
-      wall.height = bounds.y;
-      walls.push(wall);
+      default: break;
     }
   };
 
@@ -102,7 +86,7 @@
     let packetIndex = 0;
     packet[packetIndex++] = 100;
     packet[packetIndex++] = username.length;
-    console.log(username);
+
     for (let i = 0; i < username.length; i++) {
       packet[packetIndex++] = username.charCodeAt(i);
     }
@@ -122,29 +106,26 @@
     socket.send(new Uint8Array([1]));
   }
 
+  const ctx = canvas.getContext('2d');
   function draw() {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    for (var i = 0; i < users.length; i++) {
+    for (let i = 0; i < users.length; i++) {
       ctx.beginPath();
       ctx.arc(users[i].x, users[i].y, 20, 0, 2 * Math.PI);
       ctx.stroke();
 
-      ctx.beginPath();
-      var headX = users[i].x + users[i].rotation.x * 20;
-      var headY = users[i].y + users[i].rotation.y * 20;
-
-      ctx.moveTo(headX, headY);
-      ctx.lineTo(users[i].x, users[i].y);
-      ctx.stroke();
+      // draw directional line
+      // ctx.beginPath();
+      // const headX = users[i].x + users[i].rotation.x * 20;
+      // const headY = users[i].y + users[i].rotation.y * 20;
+      //
+      // ctx.moveTo(headX, headY);
+      // ctx.lineTo(users[i].x, users[i].y);
+      // ctx.stroke();
     }
-    for (var i = 0; i < bullets.length; i++) {
+    for (let i = 0; i < bullets.length; i++) {
       ctx.beginPath();
       ctx.arc(bullets[i].x, bullets[i].y, 5, 0, 2 * Math.PI);
-      ctx.stroke();
-    }
-    for (var i = 0; i < walls.length; i++) {
-      var wall = walls[i];
-      ctx.rect(wall.x - wall.width / 2, wall.y - wall.height / 2, wall.width, wall.height);
       ctx.stroke();
     }
     window.requestAnimationFrame(draw);

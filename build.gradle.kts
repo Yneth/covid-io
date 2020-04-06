@@ -20,7 +20,7 @@ dependencies {
     implementation("io.netty:netty-all:4.1.48.Final")
     implementation("io.netty:netty-tcnative:2.0.30.Final")
 
-    implementation("org.jbox2d:jbox2d-library:2.2.1.1")
+    implementation("org.dyn4j:dyn4j:3.4.0")
 }
 
 tasks.withType<Test> {

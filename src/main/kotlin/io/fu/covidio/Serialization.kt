@@ -4,7 +4,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufAllocator
 import io.netty.channel.Channel
 import java.util.UUID
-import org.jbox2d.common.Vec2
+import org.dyn4j.geometry.Vector2
 
 // input codes
 const val MOVE_CODE = 0
@@ -28,9 +28,9 @@ class GameDecoder {
             MOVE_CODE -> MoveCommand(
                 channel,
                 // TODO: normalize
-                Vec2(
-                    byteBuf.readShort().toFloat(),
-                    byteBuf.readShort().toFloat()
+                Vector2(
+                    byteBuf.readShort().toDouble(),
+                    byteBuf.readShort().toDouble()
                 )
             )
             SHOOT_CODE -> ShootCommand(channel)
@@ -78,11 +78,11 @@ class GameEncoder(
     private fun writePosition(go: GameObject, buf: ByteBuf) {
         // writing as short as we are never
         // going to exceed its' value
-        buf.writeShort(float2int(go.position.x))
-        buf.writeShort(float2int(go.position.y))
+        buf.writeShort(double2int(go.position.x))
+        buf.writeShort(double2int(go.position.y))
     }
 
-    private fun float2int(f: Float): Int {
+    private fun double2int(f: Double): Int {
         return (f * 10).toInt()
     }
 }

@@ -5,15 +5,15 @@ import io.netty.channel.EventLoop
 import io.netty.channel.group.ChannelGroup
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
-import org.jbox2d.callbacks.ContactImpulse
-import org.jbox2d.callbacks.ContactListener
-import org.jbox2d.collision.Manifold
-import org.jbox2d.dynamics.contacts.Contact
 
 data class GameState(
     val playersByChannelId: MutableMap<ChannelId, GameObject>,
     val bullets: MutableList<GameObject>
-)
+) {
+    fun gameObjects(): Sequence<GameObject> =
+        playersByChannelId.values.asSequence()
+            .plus(bullets.asSequence())
+}
 
 class GameLoop(
     eventLoop: EventLoop,
@@ -34,19 +34,6 @@ class GameLoop(
 
     init {
         // TODO
-        physics.setContactListener(object : ContactListener {
-            override fun endContact(contact: Contact) {
-            }
-
-            override fun beginContact(contact: Contact) {
-            }
-
-            override fun preSolve(contact: Contact, oldManifold: Manifold) {
-            }
-
-            override fun postSolve(contact: Contact, impulse: ContactImpulse) {
-            }
-        })
     }
 
     private fun handleInput(cmd: UserCommand) {
@@ -60,7 +47,13 @@ class GameLoop(
             }
             is MoveCommand -> {
                 gameState.playersByChannelId[cmd.channel.id()]
-                    ?.let { it.direction = cmd.direction }
+                    ?.let {
+                        it.direction.set(
+                            cmd.direction.copy()
+                                .subtract(it.position)
+                                .fastNormalize()
+                        )
+                    }
             }
             is ShootCommand ->
                 createBullet(physics, gameState.playersByChannelId.values.first())
@@ -75,7 +68,7 @@ fun createGameLoop(
     eventLoop: EventLoop
 ): GameLoop {
     val physics = Physics()
-    val output = Output(encoder, physics, channelGroup)
+    val output = Output(encoder, channelGroup)
     val input = Input()
     val gameState = GameState(mutableMapOf(), mutableListOf())
     return GameLoop(

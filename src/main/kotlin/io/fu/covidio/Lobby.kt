@@ -11,7 +11,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 data class Realm(
     val id: String,
-    val gameLoop: GameLoop
+    val gameLoop: GameLoop,
+    val channelGroup: ChannelGroup
 )
 
 const val RealmIdParam = "realmId"
@@ -29,6 +30,7 @@ class Lobby(
 
     fun removeChannel(ch: Channel) {
         withRealm(ch) {
+            it.channelGroup.remove(ch)
             it.gameLoop.input.push(LeaveGameCommand(ch))
         }
     }
@@ -36,6 +38,9 @@ class Lobby(
     fun handleMessage(ch: Channel, ws: BinaryWebSocketFrame) {
         withRealm(ch) {
             val cmd = decoder.decode(ch, ws.content())
+            if (cmd is JoinGameCommand) {
+                it.channelGroup.add(ch)
+            }
             it.gameLoop.input.push(cmd)
         }
     }
@@ -64,13 +69,15 @@ fun initLobby(
     eventLoopSupplier: () -> EventLoop = { DefaultEventLoop() }
 ): Lobby {
     val realms = (0 until realmCount).map {
+        val channelGroup = chGroupSupplier()
         Realm(
             id = "realm-$it",
             gameLoop = createGameLoop(
                 encoder = encoder,
-                channelGroup = chGroupSupplier(),
+                channelGroup = channelGroup,
                 eventLoop = eventLoopSupplier()
-            )
+            ),
+            channelGroup = channelGroup
         )
     }
     return Lobby(realms, decoder)

@@ -2,7 +2,7 @@ package io.fu.covidio
 
 import io.netty.channel.Channel
 import java.util.concurrent.ConcurrentLinkedQueue
-import org.jbox2d.common.Vec2
+import org.dyn4j.geometry.Vector2
 
 sealed class UserCommand {
     abstract val channel: Channel
@@ -15,7 +15,7 @@ class JoinGameCommand(
 
 class MoveCommand(
     override val channel: Channel,
-    val direction: Vec2
+    val direction: Vector2
 ) : UserCommand()
 
 class ShootCommand(

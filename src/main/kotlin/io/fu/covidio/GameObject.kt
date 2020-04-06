@@ -2,10 +2,9 @@ package io.fu.covidio
 
 import io.netty.channel.Channel
 import java.util.UUID
-import org.jbox2d.collision.shapes.CircleShape
-import org.jbox2d.common.Vec2
-import org.jbox2d.dynamics.Body
-import org.jbox2d.dynamics.BodyDef
+import org.dyn4j.dynamics.Body
+import org.dyn4j.geometry.Circle
+import org.dyn4j.geometry.Vector2
 
 sealed class Component {
     abstract val gameObject: GameObject
@@ -26,9 +25,10 @@ class GameObject(
     createRigidBody: (GameObject) -> Body,
     createComponents: (GameObject) -> List<Component>,
     val id: String = UUID.randomUUID().toString(),
-    var position: Vec2,
-    var direction: Vec2,
-    var rotation: Vec2
+    var position: Vector2,
+    var direction: Vector2,
+    var rotation: Vector2,
+    var moveSpeed: Float
 ) {
     val components: List<Component> = createComponents(this)
     val rigidBody: Body = createRigidBody(this)
@@ -48,16 +48,13 @@ fun createPlayer(
     userName: String
 ): GameObject {
     return GameObject(
-        position = Vec2(),
-        direction = Vec2(),
-        rotation = Vec2(),
+        position = Vector2(),
+        direction = Vector2(),
+        rotation = Vector2(),
         createRigidBody = {
-            physics.addBody(
-                bodyDef = BodyDef(),
-                shape = CircleShape().apply {
-                    this.m_radius = 10f
-                }
-            ).apply { this.userData = it }
+            Body()
+                .apply { this.addFixture(Circle(10.0)) }
+                .also { physics.addBody(it) }
         },
         createComponents = {
             listOf(
@@ -67,7 +64,8 @@ fun createPlayer(
                     gameObject = it
                 )
             )
-        }
+        },
+        moveSpeed = 100f
     )
 }
 
@@ -76,21 +74,19 @@ fun createBullet(
     player: GameObject
 ): GameObject {
     return GameObject(
-        position = player.position,
-        direction = player.direction,
-        rotation = player.rotation,
+        position = player.position.copy(),
+        direction = player.direction.copy(),
+        rotation = player.rotation.copy(),
         createRigidBody = {
-            physics.addBody(
-                bodyDef = BodyDef(),
-                shape = CircleShape().apply {
-                    this.m_radius = 2.0f
-                }
-            ).apply { this.userData = it }
+            Body()
+                .apply { this.addFixture(Circle(2.0)) }
+                .also { physics.addBody(it) }
         },
         createComponents = {
             listOf(
                 BulletComponent(player.id, it)
             )
-        }
+        },
+        moveSpeed = 200f
     )
 }
